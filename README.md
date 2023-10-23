@@ -297,24 +297,23 @@ Have dataset(s) in one of the following format (JSONL recommended):
 
 #### How to add custom prompts
 
-Using yaml. Example:
+For a dataset that is preprocessed for instruction purposes:
+
+```json
+{"instruction": "...", "output": "..."}
+```
+
+You can use this example in your YAML config:
+
 ```yaml
 datasets:
   - path: repo
     type:
       system_prompt: ""
-      no_input_format: |-
-        User: {instruction}<|end_of_turn|>
-        Assistant:
-      format: |-
-        User: {instruction}
-        {input}<|end_of_turn|>
-        Assistant:
+      field_system: system
+      format: "[INST] {instruction} [/INST]"
+      no_input_format: "[INST] {instruction} [/INST]"
 ```
-
-Using file:
-1. Add your method to a file in [prompt_strategies](src/axolotl/prompt_strategies). Please see other files as example.
-2. Use your custom file name as the dataset type `<prompt_strategies_file>.load_<load_fn>`.
 
 #### How to use your custom pretokenized dataset
 
@@ -469,12 +468,13 @@ datasets:
     type:
       # The below are defaults. only set what's needed.
       system_prompt: ""
+      system_format: "{system}"
       field_system: system
       field_instruction: instruction
-      field_output: input
+      field_input: input
+      field_output: output
 
       # Customizable to be single line or multi-line
-      system_format: "{system}"
       # 'format' can include {input}
       format: |-
         User: {instruction} {input}
@@ -482,7 +482,7 @@ datasets:
       # 'no_input_format' cannot include {input}
       no_input_format: "{instruction} "
 
-      # For completions datsets, uses the provided field if not `text`
+      # For `completion` datsets only, uses the provided field instead of `text` column
       field:
 
 # Axolotl attempts to save the dataset as an arrow after packing the data together so
@@ -671,6 +671,11 @@ adam_epsilon:
 # Gradient clipping max norm
 max_grad_norm:
 
+# Augmentation techniques
+# NEFT https://arxiv.org/abs/2310.05914, set this to a number (paper default is 5) to add noise to embeddings
+# currently only supported on Llama and Mistral
+noisy_embedding_alpha:
+
 # Whether to bettertransformers
 flash_optimum:
 # Whether to use xformers attention patch https://github.com/facebookresearch/xformers:
@@ -679,6 +684,8 @@ xformers_attention:
 flash_attention:
 flash_attn_cross_entropy:  # Whether to use flash-attention cross entropy implementation - advanced use only
 flash_attn_rms_norm:  # Whether to use flash-attention rms norm implementation - advanced use only
+flash_attn_fuse_qkv: # Whether to fuse QKV into a single operation
+flash_attn_fuse_mlp: # Whether to fuse part of the MLP into a single operation
 # Whether to use scaled-dot-product attention
 # https://pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html
 sdp_attention:
@@ -812,7 +819,7 @@ accelerate launch -m axolotl.cli.train your_config.yml
 
 You can optionally pre-tokenize dataset with the following before finetuning:
 ```bash
-CUDA_VISIBLE_DEVICES="" accelerate launch -m axolotl.cli.train your_config.yml --prepare_ds_only
+CUDA_VISIBLE_DEVICES=0 accelerate launch -m axolotl.cli.train your_config.yml --prepare_ds_only
 ```
 
 ##### Config
@@ -876,6 +883,10 @@ Pass the appropriate flag to the train command:
     --base_model="./completed-model" --prompter=None --load_in_8bit=True
   ```
 
+Please use `--sample_packing False` if you have it on and receive the error similar to below:
+
+> RuntimeError: stack expects each tensor to be equal size, but got [1, 32, 1, 128] at entry 0 and [1, 32, 8, 128] at entry 1
+
 ### Merge LORA to base
 
 Add below flag to train command above
@@ -891,6 +902,8 @@ CUDA_VISIBLE_DEVICES="" python3 -m axolotl.cli.merge_lora ...
 ```
 
 ## Common Errors 🧰
+
+See also the [FAQ's](./docs/faq.md).
 
 > If you encounter a 'Cuda out of memory' error, it means your GPU ran out of memory during the training process. Here's how to resolve it:
 

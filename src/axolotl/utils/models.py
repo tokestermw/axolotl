@@ -180,6 +180,26 @@ def load_model(
         LOG.info("patching with flash attention")
         replace_mistral_attn_with_flash_attn(packed=cfg.sample_packing)
 
+    if cfg.is_llama_derived_model and cfg.noisy_embedding_alpha:
+        from axolotl.monkeypatch.llama_embeddings_hijack import (
+            replace_llama_embeddings_with_uniform_distribution,
+        )
+
+        LOG.info("patching with noisy embeddings")
+        replace_llama_embeddings_with_uniform_distribution(
+            noise_alpha=cfg.noisy_embedding_alpha
+        )
+
+    if cfg.is_mistral_derived_model and cfg.noisy_embedding_alpha:
+        from axolotl.monkeypatch.mistral_embeddings_hijack import (
+            replace_mistral_embeddings_with_uniform_distribution,
+        )
+
+        LOG.info("patching with noisy embeddings")
+        replace_mistral_embeddings_with_uniform_distribution(
+            noise_alpha=cfg.noisy_embedding_alpha
+        )
+
     if cfg.is_llama_derived_model and cfg.xpos_rope:
         from axolotl.monkeypatch.xpos_rope_llama_monkey_patch import (
             replace_llama_rope_with_xpos_rope,
@@ -252,6 +272,20 @@ def load_model(
                 load_in_4bit=cfg.load_in_4bit and cfg.adapter is not None,
                 **model_kwargs,
             )
+
+            if cfg.flash_attention and not inference:
+                from axolotl.monkeypatch.llama_attn_hijack_flash import (
+                    replace_llama_mlp_with_swiglu,
+                    replace_llama_qkv_with_fused,
+                )
+
+                if cfg.flash_attn_fuse_mlp:
+                    LOG.info("patching with SwiGLU")
+                    replace_llama_mlp_with_swiglu(model)
+
+                if cfg.flash_attn_fuse_qkv:
+                    LOG.info("patching with fused QKV")
+                    replace_llama_qkv_with_fused(model)
         # elif model_type == "GPTNeoXForCausalLM" and cfg.flash_attention:
         #     This is a WIP, still an issue with the backward pass
         #     RuntimeError: grad can be implicitly created only for scalar outputs
@@ -487,7 +521,11 @@ def find_all_linear_names(model):
     cls = (bnb.nn.Linear4bit, bnb.nn.Linear8bitLt, torch.nn.Linear, QuantLinear)
     lora_module_names = set()
     for name, module in model.named_modules():
-        if isinstance(module, cls) or "Linear" in module.__class__.__name__:
+        if (
+            isinstance(module, cls)
+            or "Linear" in module.__class__.__name__
+            and module.__class__.__name__ not in ("LlamaLinearScalingRotaryEmbedding",)
+        ):
             names = name.split(".")
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
 
