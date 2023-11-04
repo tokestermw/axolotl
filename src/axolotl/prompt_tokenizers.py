@@ -392,9 +392,11 @@ class ShareGPTPromptTokenizingStrategy(PromptTokenizingStrategy):
                     # this should be the assistant response, should end with an eos token
                     if not content.strip():
                         LOG.warning(f"assistant turn has empty text: {prompt}")
+                    # add an rstrip(), otherwise, there could be an '\n' at the end, and will add an extraneous
+                    # eos token
+                    turn = turn.rstrip()
                     res = self._tokenize(
                         turn,
-                        # back to true
                         add_eos_token=True,
                         strip_bos_token=True,
                     )
