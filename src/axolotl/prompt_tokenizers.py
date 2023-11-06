@@ -363,6 +363,10 @@ class ShareGPTPromptTokenizingStrategy(PromptTokenizingStrategy):
                 user, assistant = conversation.roles
                 role, content = part
 
+                # hack to fix tokenizer discrepancy with chatml format
+                if content and content.endswith("<|im_end|>\n"):
+                    content = content.rstrip()
+
                 # Uses "in" because role contains extra characters
                 if user in role:
                     role = (
@@ -394,7 +398,6 @@ class ShareGPTPromptTokenizingStrategy(PromptTokenizingStrategy):
                         LOG.warning(f"assistant turn has empty text: {prompt}")
                     # add an rstrip(), otherwise, there could be an '\n' at the end, and will add an extraneous
                     # eos token
-                    turn = turn.rstrip()
                     res = self._tokenize(
                         turn,
                         add_eos_token=True,
