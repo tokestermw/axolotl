@@ -466,6 +466,7 @@ def log_prediction_callback_factory(trainer: Trainer, tokenizer):
                     )
 
                     with torch.no_grad():
+                        print("prompt_texts", prompt_texts)
                         prompt_encoding = tokenizer(
                             prompt_texts, padding=True, return_tensors="pt"
                         ).to(self.cfg.device)
