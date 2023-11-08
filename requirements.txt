@@ -1,9 +1,9 @@
 --extra-index-url https://download.pytorch.org/whl/cu118
 --extra-index-url https://huggingface.github.io/autogptq-index/whl/cu118/
 torch==2.0.1
-auto-gptq==0.5.0
+auto-gptq==0.4.2
 packaging
-peft @ git+https://github.com/huggingface/peft.git
+peft==0.6.0
 transformers @ git+https://github.com/huggingface/transformers.git@acc394c4f5e1283c19783581790b3dc3105a3697
 bitsandbytes>=0.41.1
 accelerate @ git+https://github.com/huggingface/accelerate@80da9cfb09bb3cc9f1b385cb55d6b90d025a5fd9
@@ -30,4 +30,4 @@ scipy
 scikit-learn==1.2.2
 pynvml
 art
-fschat==0.2.29
+fschat==0.2.32
