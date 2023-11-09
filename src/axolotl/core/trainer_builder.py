@@ -191,6 +191,7 @@ class AxolotlTrainer(Trainer):
     def get_eval_dataloader(
         self, eval_dataset: Optional[Dataset] = None
     ) -> Union[DataLoader, MultipackDistributedDataloader]:
+        self.args.eval_sample_packing = False  # does not work so forcing it to False
         if self.args.sample_packing and self.args.eval_sample_packing is not False:
             eval_dataset = (
                 eval_dataset if eval_dataset is not None else self.eval_dataset
